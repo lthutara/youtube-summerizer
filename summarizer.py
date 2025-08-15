@@ -4,6 +4,7 @@ import youtube_transcript_api
 from googletrans import Translator
 import nltk
 from dotenv import load_dotenv
+import markdown
 
 def get_transcript(youtube_url):
     """Fetches the transcript for a given YouTube video."""
@@ -23,14 +24,24 @@ def summarize_text(transcript):
     
     model = genai.GenerativeModel('models/gemini-1.5-flash-latest')
     prompt = f"""
-    Summarize the following transcript. Also, identify key terms or less-known concepts mentioned and provide a brief, one-sentence explanation for each.
+    Your task is to provide a structured, comprehensive summary of the following YouTube transcript. Please format your output in Markdown with the following sections:
 
-    Transcript:
+    **1. Brief Introduction**
+    Provide a short, one-paragraph introduction that sets the stage and describes the video's main purpose.
+
+    **2. Core Topics**
+    Create a bulleted list of the main topics or arguments discussed in the video. Each bullet point should be a clear and concise statement.
+
+    **3. Key Takeaways**
+    List the most important, actionable, or insightful key takeaways from the video.
+
+    **4. Important Terms**
+    Identify and explain any important or less-known terms and concepts mentioned.
+
+    ---
+
+    **Transcript:**
     {transcript}
-
-    Provide the output in two parts:
-    1. A concise summary.
-    2. A list of key terms with their explanations.
     """
     try:
         response = model.generate_content(prompt)
@@ -78,6 +89,55 @@ def main():
         return
         
     print(translated_summary)
+
+    # Generate and save HTML output
+    html_output = generate_html_output(summary_and_terms, translated_summary)
+    with open("summary_article.html", "w", encoding="utf-8") as f:
+        f.write(html_output)
+    print("\nHTML article saved to summary_article.html")
+
+
+def generate_html_output(summary_and_terms, translated_summary):
+    """Generates an HTML string from the summary and translated text."""
+    # Convert Markdown to HTML
+    english_html = markdown.markdown(summary_and_terms)
+    telugu_html = markdown.markdown(translated_summary) # Assuming translated_summary might also contain Markdown
+
+    html_content = f"""
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>YouTube Video Summary</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; line-height: 1.6; margin: 20px; }}
+            .container {{ max-width: 800px; margin: auto; background: #f9f9f9; padding: 20px; border-radius: 8px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }}
+            h1, h2 {{ color: #333; }}
+            .section {{ margin-bottom: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 5px; background: #fff; }}
+            .telugu {{ font-family: 'Noto Sans Telugu', sans-serif; font-size: 1.1em; color: #0056b3; }}
+            /* Removed pre styling as we are converting to HTML */
+        </style>
+        <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Telugu&display=swap" rel="stylesheet">
+    </head>
+    <body>
+        <div class="container">
+            <h1>YouTube Video Summary</h1>
+
+            <div class="section">
+                <h2>English Summary & Key Terms</h2>
+                {english_html}
+            </div>
+
+            <div class="section telugu">
+                <h2>తెలుగు సారాంశం & ముఖ్య పదాలు (Telugu Summary & Key Terms)</h2>
+                {telugu_html}
+            </div>
+        </div>
+    </body>
+    </html>
+    """
+    return html_content
 
 
 if __name__ == "__main__":
