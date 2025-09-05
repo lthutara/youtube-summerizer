@@ -5,6 +5,7 @@ from googletrans import Translator
 import nltk
 from dotenv import load_dotenv
 import markdown
+import asyncio
 
 def get_transcript(youtube_url):
     """Fetches the transcript for a given YouTube video."""
@@ -49,7 +50,7 @@ def summarize_text(transcript):
     except Exception as e:
         return f"Error during summarization: {e}"
 
-def translate_text(text, dest_language='te'):
+async def translate_text(text, dest_language='te'):
     """Translates the text to the specified language."""
     if not text or text.startswith("Error"):
         return "Cannot translate text."
@@ -60,9 +61,9 @@ def translate_text(text, dest_language='te'):
     except Exception as e:
         return f"Error during translation: {e}"
 
-def main():
+async def main():
     """Main function to run the summarizer."""
-    youtube_url = input("Enter the YouTube video URL: ")
+    youtube_url = "https://www.youtube.com/watch?v=_Pqfjer8-O4"
     
     print("\nFetching transcript...")
     transcript = get_transcript(youtube_url)
@@ -82,7 +83,7 @@ def main():
     print(summary_and_terms)
     
     print("\n--- Translating to Telugu ---")
-    translated_summary = translate_text(summary_and_terms)
+    translated_summary = await translate_text(summary_and_terms)
     
     if translated_summary.startswith("Error"):
         print(translated_summary)
@@ -160,4 +161,4 @@ if __name__ == "__main__":
     except LookupError:
         nltk.download('punkt')
         
-    main()
+    asyncio.run(main())
