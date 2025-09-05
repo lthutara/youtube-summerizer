@@ -6,6 +6,24 @@ import nltk
 from dotenv import load_dotenv
 import markdown
 import asyncio
+import yt_dlp
+
+
+def get_video_title(youtube_url):
+    """Fetches the video title for a given YouTube URL."""
+    ydl_opts = {
+        'quiet': True,
+        'no_warnings': True,
+        'skip_download': True,
+        'force_generic_extractor': True,
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        try:
+            info = ydl.extract_info(youtube_url, download=False)
+            return info.get('title', 'Untitled Video')
+        except Exception as e:
+            print(f"Error fetching video title: {e}")
+            return "Untitled Video"
 
 def get_transcript(youtube_url):
     """Fetches the transcript for a given YouTube video."""
@@ -63,11 +81,23 @@ async def translate_text(text, dest_language='te'):
 
 async def main():
     """Main function to run the summarizer."""
-    youtube_url = "https://www.youtube.com/watch?v=_Pqfjer8-O4"
+    youtube_url = input("Enter the YouTube video URL: ")
     
     print("\nFetching transcript...")
     transcript = get_transcript(youtube_url)
-    
+
+    print("\nFetching video title...")
+    video_title = get_video_title(youtube_url)
+    # Sanitize title for filename
+    sanitized_title = "".join([c for c in video_title if c.isalnum() or c.isspace()]).rstrip()
+    sanitized_title = sanitized_title.replace(" ", "_")
+
+    # Create summaries directory if it doesn't exist
+    summaries_dir = "summaries"
+    os.makedirs(summaries_dir, exist_ok=True)
+
+    output_filename = os.path.join(summaries_dir, f"{sanitized_title}.html")
+
     if transcript.startswith("Error"):
         print(transcript)
         return
@@ -93,9 +123,9 @@ async def main():
 
     # Generate and save HTML output
     html_output = generate_html_output(summary_and_terms, translated_summary)
-    with open("summary_article.html", "w", encoding="utf-8") as f:
+    with open(output_filename, "w", encoding="utf-8") as f:
         f.write(html_output)
-    print("\nHTML article saved to summary_article.html")
+    print(f"\nHTML article saved to {output_filename}")
 
 
 def generate_html_output(summary_and_terms, translated_summary):
