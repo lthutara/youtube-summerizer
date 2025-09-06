@@ -41,7 +41,7 @@
 *   **API Key Verification:** The user wisely suggested testing the API key in isolation before running the full script.
     *   Created a dedicated test script, `test_api.py`, to provide a clear "SUCCESS" or "FAILURE" message for the API key.
 
-### Successful Execution and Final Debugging
+### Successful Execution and Initial Debugging
 
 *   **Persistent `youtube-transcript-api` Issues:** Encountered a series of stubborn errors related to the `youtube-transcript-api` library, specifically `AttributeError: type object 'YouTubeTranscriptApi' has no attribute 'get_transcript'`.
     *   Initial attempts to fix by changing import styles (`get_transcript`, `get_transcripts`) were unsuccessful.
@@ -52,10 +52,39 @@
         *   Changed the transcript fetching call to `youtube_transcript_api.YouTubeTranscriptApi.fetch(video_id)`.
         *   Corrected the `fetch` method call to be on an instance: `api_instance = youtube_transcript_api.YouTubeTranscriptApi(); transcript_list = api_instance.fetch(video_id)`.
         *   Resolved `FetchedTranscriptSnippet` not subscriptable error by changing `item["text"]` to `item.text`.
-*   **Hardcoding URL:** Temporarily hardcoded the YouTube URL in `summarizer.py` to streamline testing.
-*   **Core Functionality Achieved:** After extensive debugging, the script successfully:
-    *   Fetched the transcript for the provided YouTube URL.
-    *   Summarized the transcript and extracted key terms using the Gemini API.
-    *   Translated the summary and key terms into Telugu.
-    *   Printed the results to the console.
-*   **Next Steps:** The core functionality is now working. We can now focus on refining the output, adding more features, and cleaning up the temporary changes.
+
+## Day 2: Friday, September 5, 2025
+
+### Addressing `googletrans` Instability and Enhancements
+
+*   **Issue: `googletrans` Async/Sync Inconsistency:**
+    *   Initially, `googletrans` failed with `'coroutine' object has no attribute 'text'`, indicating it was behaving asynchronously.
+    *   Implemented `async` and `await` in `translate_text` and `main` functions, and added `import asyncio`. This resolved the `coroutine` error.
+    *   However, subsequent tests with longer videos led to `The read operation timed out` and then `object Translated can't be used in 'await' expression` errors, indicating `googletrans` reverted to synchronous behavior or its underlying API was unstable.
+    *   Attempted to add retry logic to `translate_text`, but this did not resolve the fundamental instability.
+    *   **Root Cause Identified:** `googletrans` is an unofficial wrapper around Google's public API, which is prone to breaking due to API changes or rate limiting. Its behavior is highly inconsistent and dependent on its exact version and transitive dependencies. The `git reset HEAD` operation likely caused a re-installation of dependencies that led to a different, less stable behavior of `googletrans`.
+    *   **Current Resolution:** Reverted `translate_text` to its `async` and `await` state (without retry logic) and confirmed it works for various video lengths. This indicates `googletrans` behavior is highly volatile.
+
+*   **Enhancement: Detailed Summaries (Prompt Engineering):**
+    *   Modified the Gemini prompt in `summarize_text` to request more detailed summaries.
+    *   Gradually increased the detail requested in each section of the summary (Introduction, Core Topics, Key Takeaways, Important Terms).
+    *   **Outcome:** The Gemini model successfully generated more detailed summaries, and `googletrans` handled the increased length in recent tests.
+
+*   **Enhancement: Video Title Extraction and Organized Saving:**
+    *   Integrated `yt-dlp` to reliably extract the video title from the YouTube URL.
+    *   Modified the `main` function to:
+        *   Call `get_video_title` to get the video's actual title.
+        *   Sanitize the title for use as a filename.
+        *   Create a `summaries` directory if it doesn't already exist.
+        *   Save the generated HTML output into the `summaries` directory, using the sanitized video title as the filename (e.g., `summaries/Video_Title.html`).
+    *   **Issue Faced:** Duplicate `get_video_title` function (one `yt-dlp` based, one placeholder) caused incorrect filename saving. This was due to previous `replace` operations and `git restore` bringing back old code.
+    *   **Resolution:** Manually removed the duplicate placeholder `get_video_title` function and its associated `import yt_dlp` statement.
+
+*   **Current Status:**
+    *   The script is currently working with `googletrans` (async/await setup) for both shorter and longer videos, and generates detailed summaries with correct video titles and organized saving.
+    *   The formatting of the output (especially bullet points and sub-sections) in the HTML is currently broken due to issues with Markdown parsing after the section-wise processing. This needs to be addressed.
+
+*   **Next Steps (Formatting Issue):**
+    *   The current `summarize_text` function attempts to parse the Gemini output into sections, which is causing the formatting issues. This section parsing logic needs to be reverted.
+    *   We need to revert the `summarize_text` function to return a single string (as it was before section parsing attempts).
+    *   Then, we will adjust the `main` function to handle this single string output and use `markdown.markdown` more effectively to preserve the formatting. If `markdown.markdown` itself is not sufficient, we will explore other Markdown rendering libraries or custom post-processing.
