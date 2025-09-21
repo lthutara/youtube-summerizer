@@ -55,6 +55,9 @@ def summarize_text(transcript):
     **4. Important Terms Explained**
     Identify and explain any important or less-known terms and concepts. Provide a clear definition and explain its relevance in the context of the video.
 
+    **5. Conclusion or Creator's Opinion**
+    Summarize the creator's final thoughts, conclusions, or opinions presented in the video. This section should capture the overall message or the creator's personal take on the subject matter.
+
     ---
 
     **Transcript:**
